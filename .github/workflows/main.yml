@@ -1,0 +1,33 @@
+name: Send Email Notification
+
+on:
+  workflow_dispatch:
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: GitHub Workflow Notification
+          body: |
+            Workflow "${{ github.workflow }}" has been executed.
+            
+            Repository: ${{ github.repository }}
+            Branch: ${{ github.ref }}
+            Commit: ${{ github.sha }}
+            
+            Triggered by: ${{ github.actor }}
+            
+            For more details, check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          to: niranjanjgowda1@gmail.com
+          from: GitHub Actions <niranjanjgowda1@gmail.com>

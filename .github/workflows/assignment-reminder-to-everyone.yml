@@ -23,10 +23,24 @@ jobs:
           time_left=$(echo "$output" | grep "Time remaining" | cut -d':' -f2 | xargs)
           echo "time_left=$time_left" >> $GITHUB_OUTPUT
       
+      - name: Debug Email CSV (Check Contents)
+        run: cat email_recipients.csv
+      
       - name: Build email matrix
         id: set-matrix
         run: |
-          EMAILS_JSON=$(tail -n +2 email_recipients.csv | jq -R -s -c 'split("\n") | map(select(length > 0) | {email: .})')
+          if [ ! -f email_recipients.csv ]; then
+            echo "Error: email_recipients.csv not found!" >&2
+            exit 1
+          fi
+          
+          EMAILS_JSON=$(tail -n +2 email_recipients.csv | awk -F',' '{print $1}' | jq -R -s -c 'split("\n") | map(select(length > 0) | {email: .})')
+          
+          if [ -z "$EMAILS_JSON" ] || [ "$EMAILS_JSON" == "[]" ]; then
+            echo "No emails found in CSV file!" >&2
+            exit 1
+          fi
+          
           echo "emails=$EMAILS_JSON" >> $GITHUB_OUTPUT
   
   send-email:
@@ -34,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        email: ${{ fromJson(needs.prepare.outputs.emails) }}
+        email: ${{ fromJson(needs.prepare.outputs.emails) || [] }}
     
     steps:
       - name: Send email notification
@@ -46,8 +60,8 @@ jobs:
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: Complete devops assignment
           body: |
-            ${{ needs.prepare.outputs.time_left }}
+            Time remaining: ${{ needs.prepare.outputs.time_left }}
             
             This is an automated reminder.
-          to: ${{ matrix.email }}
+          to: ${{ matrix.email.email }}
           from: GitHub Actions

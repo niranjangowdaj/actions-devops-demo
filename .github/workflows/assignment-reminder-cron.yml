@@ -1,4 +1,4 @@
-name: Assignment Reminder Email
+name: Assignment Reminder Email cron
 
 on:
   schedule:

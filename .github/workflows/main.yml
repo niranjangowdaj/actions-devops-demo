@@ -49,5 +49,5 @@ jobs:
           body: |
             Time remaining until 6 PM IST today: ${{ steps.calculate-time.outputs.time_left }}
             
-          to: niranjanjgowda1@gmail.com
-          from: GitHub Actions <github-actions@github.com>
+          to: 2024sl93077@wilp.bits-pilani.ac.in
+          from: GitHub Actions

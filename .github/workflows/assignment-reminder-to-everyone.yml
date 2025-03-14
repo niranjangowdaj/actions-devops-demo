@@ -1,0 +1,54 @@
+name: Assignment Reminder Email to everyone
+
+on:
+  workflow_dispatch:
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      emails: ${{ steps.set-matrix.outputs.emails }}
+      time_left: ${{ steps.calculate-time.outputs.time_left }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Run time calculation script
+        id: calculate-time
+        run: |
+          chmod +x ./calculate_time.sh
+          output=$(./calculate_time.sh)
+          echo "$output"
+          time_left=$(echo "$output" | grep "Time remaining" | cut -d':' -f2 | xargs)
+          echo "time_left=$time_left" >> $GITHUB_OUTPUT
+      
+      - name: Build email matrix
+        id: set-matrix
+        run: |
+          # Convert CSV to JSON array (skip header row)
+          EMAILS_JSON=$(tail -n +2 email_recipients.csv | jq -R -s -c 'split("\n") | map(select(length > 0))')
+          echo "emails=$EMAILS_JSON" >> $GITHUB_OUTPUT
+  
+  send-email:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        email: ${{ fromJson(needs.prepare.outputs.emails) }}
+    
+    steps:
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: Complete devops assignment
+          body: |
+            ${{ needs.prepare.outputs.time_left }}
+            
+            This is an automated reminder.
+          to: ${{ matrix.email }}
+          from: GitHub Actions

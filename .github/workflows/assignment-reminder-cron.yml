@@ -1,0 +1,41 @@
+name: Assignment Reminder Email
+
+on:
+  schedule:
+    - cron: '0 */2 * * *'
+  
+  workflow_dispatch:
+
+jobs:
+  send-email:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Run time calculation script
+        id: calculate-time
+        run: |
+          chmod +x ./calculate_time.sh
+          
+          output=$(./calculate_time.sh)
+          echo "$output"
+          
+          # Set output for next step
+          time_left=$(echo "$output" | grep "Time remaining" | cut -d':' -f2 | xargs)
+          echo "time_left=$time_left" >> $GITHUB_OUTPUT
+          
+      - name: Send email notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.MAIL_SERVER }}
+          server_port: ${{ secrets.MAIL_PORT }}
+          username: ${{ secrets.MAIL_USERNAME }}
+          password: ${{ secrets.MAIL_PASSWORD }}
+          subject: Complete devops assignment
+          body: |
+            ${{ steps.calculate-time.outputs.time_left }}
+          
+          to: 2024sl93077@wilp.bits-pilani.ac.in
+          from: GitHub Actions

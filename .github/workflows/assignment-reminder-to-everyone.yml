@@ -48,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        email: ${{ fromJson(needs.prepare.outputs.emails) || [] }}
+        email: ${{ fromJson(needs.prepare.outputs.emails)}}
     
     steps:
       - name: Send email notification

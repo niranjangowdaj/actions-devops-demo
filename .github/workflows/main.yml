@@ -1,4 +1,4 @@
-name: Send Email Notification
+name: Assignment Reminder Email
 
 on:
   workflow_dispatch:
@@ -11,6 +11,33 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
         
+      - name: Calculate time left to 6 PM IST
+        id: calculate-time
+        run: |
+          # Get current time in UTC
+          current_time_utc=$(date -u +"%Y-%m-%d %H:%M:%S")
+          
+          # Calculate today's 6 PM IST in UTC (6 PM IST = 12:30 PM UTC)
+          target_time_utc=$(date -u -d "$(date -u +%Y-%m-%d) 12:30:00" +"%Y-%m-%d %H:%M:%S")
+          
+          # If current time is past 6 PM IST, set target to tomorrow
+          if [[ $(date -u +%s) -gt $(date -u -d "$target_time_utc" +%s) ]]; then
+            target_time_utc=$(date -u -d "$(date -u +%Y-%m-%d) 12:30:00 + 1 day" +"%Y-%m-%d %H:%M:%S")
+          fi
+          
+          # Calculate time difference in seconds
+          current_seconds=$(date -u -d "$current_time_utc" +%s)
+          target_seconds=$(date -u -d "$target_time_utc" +%s)
+          diff_seconds=$((target_seconds - current_seconds))
+          
+          # Convert to hours and minutes
+          hours=$((diff_seconds / 3600))
+          minutes=$(( (diff_seconds % 3600) / 60 ))
+          
+          # Create time left message
+          time_left="$hours hours and $minutes minutes"
+          echo "time_left=$time_left" >> $GITHUB_OUTPUT
+          
       - name: Send email notification
         uses: dawidd6/action-send-mail@v3
         with:
@@ -18,16 +45,9 @@ jobs:
           server_port: ${{ secrets.MAIL_PORT }}
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
-          subject: GitHub Workflow Notification
+          subject: Complete devops assignment
           body: |
-            Workflow "${{ github.workflow }}" has been executed.
+            Time remaining until 6 PM IST today: ${{ steps.calculate-time.outputs.time_left }}
             
-            Repository: ${{ github.repository }}
-            Branch: ${{ github.ref }}
-            Commit: ${{ github.sha }}
-            
-            Triggered by: ${{ github.actor }}
-            
-            For more details, check: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           to: niranjanjgowda1@gmail.com
-          from: GitHub Actions <niranjanjgowda1@gmail.com>
+          from: GitHub Actions <github-actions@github.com>
